@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "project"
 include(":app")
- 
+include(":ble_lib")

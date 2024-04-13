@@ -1,7 +1,6 @@
 package com.example.project.ui.fragments
 
 import android.content.Intent
-import android.telecom.Call.Details
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,16 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.example.project.BluetoothActivity
-import com.example.project.Screens
+import com.example.project.ui.BluetoothActivity
 import com.example.project.ui.theme.GreenMenu
 
 

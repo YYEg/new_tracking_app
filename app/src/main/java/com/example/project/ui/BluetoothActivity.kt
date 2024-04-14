@@ -148,6 +148,7 @@ class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
         return if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                     && ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
         } else {
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         }
@@ -158,7 +159,8 @@ class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
             permLauncher.launch(arrayOf(
                 Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.BLUETOOTH_SCAN
             ))
         } else {
             permLauncher.launch(arrayOf(

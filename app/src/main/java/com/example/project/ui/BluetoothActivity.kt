@@ -29,7 +29,7 @@ import com.example.project.changeButtonCollor
 import com.example.project.ui.theme.GreenMenu
 import com.google.android.material.snackbar.Snackbar
 
-class BluetoothActivity : AppCompatActivity() {
+class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
     private lateinit var itemAdapter: ItemAdapter
     //переменная для адаптера на блютуз
     private var bAdapter : BluetoothAdapter? = null
@@ -40,11 +40,11 @@ class BluetoothActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
         setContentView(R.layout.activity_bluetooth)
         initRcViews()
         registerBtLauncher()
         initBtAdapter()
+
         //кнопочка с логотипом ble над списокм устройств
         val imBle = findViewById<ImageButton>(R.id.imBlueTooth)
         imBle.setOnClickListener {
@@ -58,7 +58,7 @@ class BluetoothActivity : AppCompatActivity() {
         val rcViewSearch = findViewById<RecyclerView>(R.id.rcViewSearch)
         val rcViewPaired = findViewById<RecyclerView>(R.id.rcViewPaired)
         rcViewPaired.layoutManager = LinearLayoutManager(this)
-        itemAdapter = ItemAdapter()
+        itemAdapter = ItemAdapter(this)
         rcViewPaired.adapter = itemAdapter
 
     }
@@ -71,7 +71,8 @@ class BluetoothActivity : AppCompatActivity() {
                 list.add(
                     ListItem(
                         it.name,
-                        it.address
+                        it.address,
+                        false
                     )
                 )
             }
@@ -123,5 +124,9 @@ class BluetoothActivity : AppCompatActivity() {
                 Snackbar.make(imBle, "Bluetooth выключен", Snackbar.LENGTH_SHORT).show()
             }
         }
+    }
+
+    override fun onClick(device: ListItem) {
+
     }
 }

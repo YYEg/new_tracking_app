@@ -6,9 +6,11 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color.GREEN
 import android.graphics.Color.RED
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -22,6 +24,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.project.BleConstants
 import com.example.project.ItemAdapter
 import com.example.project.ListItem
 import com.example.project.R
@@ -30,18 +33,25 @@ import com.example.project.ui.theme.GreenMenu
 import com.google.android.material.snackbar.Snackbar
 
 class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
+    //shared pref переменная
+    private var preferences: SharedPreferences? = null
     private lateinit var itemAdapter: ItemAdapter
     //переменная для адаптера на блютуз
     private var bAdapter : BluetoothAdapter? = null
     //переменная блютуз лаунчера
     private lateinit var btLauncher : ActivityResultLauncher<Intent>
+    //Спрашиватель у пользователя разрешгений
+    private lateinit var permLauncher: ActivityResultLauncher<Array<String>>
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        preferences = getSharedPreferences(BleConstants.PREFERENCES, Context.MODE_PRIVATE)
+
         setContentView(R.layout.activity_bluetooth)
         initRcViews()
+        checkPermissions()
         registerBtLauncher()
         initBtAdapter()
 
@@ -72,7 +82,7 @@ class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
                     ListItem(
                         it.name,
                         it.address,
-                        false
+                        preferences?.getString(BleConstants.MAC, "") == it.address
                     )
                 )
             }
@@ -126,7 +136,53 @@ class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
         }
     }
 
-    override fun onClick(device: ListItem) {
-
+    //непосрдественно функция проверки разрешений
+    private fun checkPermissions(){
+        if (!checkBlePermissions()){
+            registerPermissionLauncher()
+            launchBlePermissions()
+        }
     }
+    //Проверка блютуз разрешений
+    fun checkBlePermissions() : Boolean{
+        return if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    // Запуск окон спрашивающих разрешение
+    private fun launchBlePermissions(){
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
+            permLauncher.launch(arrayOf(
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ))
+        } else {
+            permLauncher.launch(arrayOf(
+                Manifest.permission.BLUETOOTH_CONNECT))
+        }
+    }
+
+    private fun registerPermissionLauncher(){
+        permLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ){
+
+        }
+    }
+
+    private fun saveMac(mac: String){
+        val editor = preferences?.edit()
+        editor?.putString(BleConstants.MAC, mac)
+        editor?.apply()
+    }
+
+    override fun onClick(device: ListItem) {
+        saveMac(device.mac)
+    }
+
+
 }

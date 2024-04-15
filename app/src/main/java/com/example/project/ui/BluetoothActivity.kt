@@ -4,8 +4,10 @@ import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color.GREEN
@@ -15,27 +17,29 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.Button
 import android.widget.ImageButton
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.graphics.Color
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.project.BleConstants
+import com.example.project.InfoBleActivity
 import com.example.project.ItemAdapter
 import com.example.project.ListItem
 import com.example.project.R
 import com.example.project.changeButtonCollor
-import com.example.project.ui.theme.GreenMenu
 import com.google.android.material.snackbar.Snackbar
 
 class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
     //shared pref переменная
     private var preferences: SharedPreferences? = null
     private lateinit var itemAdapter: ItemAdapter
+    private lateinit var discoveryItemAdapter: ItemAdapter
     //переменная для адаптера на блютуз
     private var bAdapter : BluetoothAdapter? = null
     //переменная блютуз лаунчера
@@ -50,7 +54,9 @@ class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
         preferences = getSharedPreferences(BleConstants.PREFERENCES, Context.MODE_PRIVATE)
 
         setContentView(R.layout.activity_bluetooth)
+
         initRcViews()
+        intentFilters()
         checkPermissions()
         registerBtLauncher()
         initBtAdapter()
@@ -61,15 +67,44 @@ class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
             btLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
             bluetoothState()
         }
+        val imBleSearch = findViewById<ImageButton>(R.id.imBluetoothSearch)
+        val progressB = findViewById<ProgressBar>(R.id.pbSearch)
+        imBleSearch.setOnClickListener {
+            try {
+                if(bAdapter?.isEnabled == true){
+                    bAdapter?.startDiscovery()
+                    it.visibility = View.GONE
+                    progressB.visibility = View.VISIBLE
+                }
+            } catch(e: SecurityException) {
+                Log.d("MyLog", "${e}")
+            }
+        }
+        val btnToInfo = findViewById<Button>(R.id.btnToInfo)
+        btnToInfo.setOnClickListener {
+            // Retrieve the MAC address from SharedPreferences
+            val macAddress = preferences?.getString(BleConstants.MAC, "")
+            // Create the Intent
+            Log.d("MyLog", "${macAddress}")
+            val intent = Intent(this, InfoBleActivity::class.java)
+            // Pass the MAC address as an extra to the Intent
+            intent.putExtra("macAddress", macAddress)
+            // Start the InfoBleActivity
+            startActivity(intent)
+        }
 
     }
+
     //функция инициализации ресайслеров
     private fun initRcViews() {
         val rcViewSearch = findViewById<RecyclerView>(R.id.rcViewSearch)
         val rcViewPaired = findViewById<RecyclerView>(R.id.rcViewPaired)
         rcViewPaired.layoutManager = LinearLayoutManager(this)
-        itemAdapter = ItemAdapter(this)
+        rcViewSearch.layoutManager = LinearLayoutManager(this)
+        itemAdapter = ItemAdapter(this, false)
         rcViewPaired.adapter = itemAdapter
+        discoveryItemAdapter = ItemAdapter(this, true)
+        rcViewSearch.adapter = discoveryItemAdapter
 
     }
 
@@ -80,8 +115,7 @@ class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
             deviceLIst.forEach{
                 list.add(
                     ListItem(
-                        it.name,
-                        it.address,
+                        it,
                         preferences?.getString(BleConstants.MAC, "") == it.address
                     )
                 )
@@ -182,9 +216,45 @@ class BluetoothActivity : AppCompatActivity(), ItemAdapter.Listener {
         editor?.apply()
     }
 
-    override fun onClick(device: ListItem) {
-        saveMac(device.mac)
+    override fun onClick(item: ListItem) {
+        saveMac(item.device.address)
     }
 
+    private val broadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == BluetoothDevice.ACTION_FOUND) {
+                val deviceFounded = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                deviceFounded?.let {
+                    val list = mutableSetOf<ListItem>()
+                    list.addAll(discoveryItemAdapter.currentList)
+                    list.add(ListItem(it, false))
+                    discoveryItemAdapter.submitList(list.toList())
+                    discoveryItemAdapter.notifyDataSetChanged() // Notify adapter of data change
+                    Log.d("MyLog", "${list}")
+                    val tvEmtpySearch = findViewById<TextView>(R.id.tvEmpty2)
+                    tvEmtpySearch.visibility = if(list.isEmpty()) View.VISIBLE else View.GONE
+                }
+            } else if (intent?.action == BluetoothDevice.ACTION_BOND_STATE_CHANGED) {
+                //при изменении статуса соединения, список сопряженных устрйоств обновляется
+                getPairedDevices()
+            } else if (intent?.action == BluetoothAdapter.ACTION_DISCOVERY_FINISHED) {
+                // Для крутилки при поиске
+                val imBleSearch = findViewById<ImageButton>(R.id.imBluetoothSearch)
+                val progressB = findViewById<ProgressBar>(R.id.pbSearch)
+                imBleSearch.visibility = View.VISIBLE
+                progressB.visibility = View.GONE
+
+            }
+        }
+    }
+
+    private fun intentFilters(){
+        val f1 = IntentFilter(BluetoothDevice.ACTION_FOUND)
+        val f2 = IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
+        val f3 = IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+        registerReceiver(broadcastReceiver, f1)
+        registerReceiver(broadcastReceiver, f2)
+        registerReceiver(broadcastReceiver, f3)
+    }
 
 }
